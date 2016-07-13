@@ -20,7 +20,7 @@ function module_missing_message_fixer_form() {
   // Grab all the modules in the system table.
   $query = db_query("SELECT filename, type, name FROM {system} WHERE type = :type", array(':type' => 'module'));
 
-
+  // Go through the query and check to see if the module exists in the directory.
   foreach ($query->fetchAll() as $record) {
     // Grab the checker.
     $check = drupal_get_filename($record->type, $record->name, $record->filename, FALSE);
@@ -34,6 +34,17 @@ function module_missing_message_fixer_form() {
       );
     }
   }
+
+  // Fancy title string.
+  $title = t('This list comes from the system table and is checked against the drupal_get_filename() function. See <a href="@link" target="_blank">this issue</a> for more information.', array(
+    '@link' => 'https://www.drupal.org/node/2487215',
+  ));
+
+  // Title.
+  $form['title'] = array(
+    '#type' => 'item',
+    '#markup' => '<h2><center>' . $title . '</h2></center>',
+  );
 
   // Fancy submit buttons to win this.
   $form['submit'] = array(

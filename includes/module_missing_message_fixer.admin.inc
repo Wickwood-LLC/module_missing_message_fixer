@@ -5,7 +5,6 @@
  * The Missing Module Message Fixer Admin Settings file.
  */
 
-
 /**
  * Missing Module Message Fixer Admin Page Callback.
  */
@@ -52,7 +51,7 @@ function module_missing_message_fixer_form_submit() {
 
   foreach ($query->fetchAll() as $record) {
     // Grab the checker.
-    $check = drupal_get_filename($record->type, $record->name, $record->filename, TRUE);
+    $check = drupal_get_filename($record->type, $record->name, $record->filename, FALSE);
 
     // If drupal_get_filename returns null = we got problems.
     if (is_null($check) && $record->name != 'default') {
@@ -60,6 +59,7 @@ function module_missing_message_fixer_form_submit() {
     }
   }
 
+  // Delete if there is no modules.
   if (count($modules) > 0) {
     db_delete('system')
       ->condition('name', $modules, 'IN')
@@ -81,7 +81,7 @@ function _module_missing_message_fixer_table() {
 
   foreach ($query->fetchAll() as $record) {
     // Grab the checker.
-    $check = drupal_get_filename($record->type, $record->name, $record->filename, TRUE);
+    $check = drupal_get_filename($record->type, $record->name, $record->filename, FALSE);
 
     // If drupal_get_filename returns null = we got problems.
     if (is_null($check) && $record->name != 'default') {
@@ -93,7 +93,7 @@ function _module_missing_message_fixer_table() {
     }
   }
 
-  // Shows Empty Screen
+  // Shows Empty Screen.
   if (!count($rows)) {
     $header = array('Empty');
     $rows[] = array(t('No Missing Modules Found!!!'));

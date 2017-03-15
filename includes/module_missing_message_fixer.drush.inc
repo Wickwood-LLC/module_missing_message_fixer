@@ -120,6 +120,21 @@ function module_missing_message_fixer_drush_command() {
       ),
     ),
   );
+
+  $items['module-missing-message-fixer-fix-improved'] = array(
+    'description' => dt('Fixes modules that have missing messages.'),
+    'aliases' => array(
+      'mmmft',
+    ),
+    'arguments' => array(
+      'name' => 'The name of the module to fix.',
+    ),
+    'options' => array(
+      'all' => dt('Fixes all module missing messages'),
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+  );
+
   return $items;
 }
 
@@ -172,4 +187,58 @@ function drush_module_missing_message_fixer_fix($name = NULL) {
       }
     }
   }
+}
+
+function drush_module_missing_message_fixer_fix_improved($name = NULL) {
+  $query = db_query(
+    "SELECT filename, type, name, status, info FROM {system} WHERE name = :name",
+    array(':name' => $name)
+  );
+  $row = $query->fetchObject();
+
+  if (!$row) {
+    drush_print(dt("Module information does not exist for @module in system table", array('@module' => $name)));
+    return;
+  }
+
+  $row->info = unserialize($row->info);
+
+  if (!$row->status) {
+    //
+  }
+  else {
+
+    $check = drupal_get_filename($row->type, $row->name, $row->filename, FALSE);
+
+    if(!is_null($check)) {
+      drush_print(dt("Module file(s) already exist in file system. You may uninstall it manually"));
+      return;
+    }
+
+    // Download module of version as per system table record.
+    drush_set_option('destination', conf_path() . '/modules');
+    drush_set_option('y', TRUE);
+    $command = array(
+      'callback' => 'drush_pm_download',
+      'arguments' => array("$name-{$row->info['version']}"),
+    );
+    $dl_result = drush_invoke('pm-download', array("$name-{$row->info['version']}"));
+
+    drush_print(dt("Test"));
+    if ($dl_result === FALSE) {
+      print "sdsds";
+      drush_print(dt("Module @module could not be downloaded.", array('@module' => "$name-{$row->info['version']}")));
+      return;
+    }
+
+    drush_print(dt("Rebuild registry to detect downloaded module."));
+    registry_rebuild();
+
+    drush_print(dt("Uninstalling @module properly", array('@module' => $name)));
+    drupal_uninstall_modules(array($name), FALSE);
+  }
+  drush_print(dt("Removing system table entry for @module module", array('@module' => $name)));
+  db_delete('system')
+    ->condition('name', $name)
+    ->execute();
 }

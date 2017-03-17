@@ -124,7 +124,7 @@ function module_missing_message_fixer_drush_command() {
   $items['module-missing-message-fixer-fix-improved'] = array(
     'description' => dt('Fixes modules that have missing messages.'),
     'aliases' => array(
-      'mmmft',
+      'mmmfi',
     ),
     'arguments' => array(
       'name' => 'The name of the module to fix.',
@@ -189,24 +189,21 @@ function drush_module_missing_message_fixer_fix($name = NULL) {
   }
 }
 
-function drush_module_missing_message_fixer_fix_improved($name = NULL) {
-  $query = db_query(
-    "SELECT filename, type, name, status, info FROM {system} WHERE name = :name",
-    array(':name' => $name)
-  );
-  $row = $query->fetchObject();
+function drush_module_missing_message_fixer_fix_improved() {
+  $names = func_get_args();
+  foreach ($names as $name) {
+    $query = db_query(
+      "SELECT filename, type, name, status, info FROM {system} WHERE name = :name",
+      array(':name' => $name)
+    );
+    $row = $query->fetchObject();
 
-  if (!$row) {
-    drush_print(dt("Module information does not exist for @module in system table", array('@module' => $name)));
-    return;
-  }
+    if (!$row) {
+      drush_print(dt("Module information does not exist for @module in system table", array('@module' => $name)));
+      return;
+    }
 
-  $row->info = unserialize($row->info);
-
-  if (!$row->status) {
-    //
-  }
-  else {
+    $row->info = unserialize($row->info);
 
     $check = drupal_get_filename($row->type, $row->name, $row->filename, FALSE);
 
@@ -231,14 +228,17 @@ function drush_module_missing_message_fixer_fix_improved($name = NULL) {
       return;
     }
 
-    drush_print(dt("Rebuild registry to detect downloaded module."));
+    drush_print(dt("Rebuild registry to detect downloaded module..."));
     registry_rebuild();
 
-    drush_print(dt("Uninstalling @module properly", array('@module' => $name)));
+    drush_print(dt("Uninstalling @module properly...", array('@module' => $name)));
     drupal_uninstall_modules(array($name), FALSE);
+
+    drush_print(dt("Removing system table entry for @module module...", array('@module' => $name)));
+    db_delete('system')
+      ->condition('name', $name)
+      ->execute();
   }
-  drush_print(dt("Removing system table entry for @module module", array('@module' => $name)));
-  db_delete('system')
-    ->condition('name', $name)
-    ->execute();
+  drush_print(dt("Rebuilding registry finally..."));
+  registry_rebuild();
 }
